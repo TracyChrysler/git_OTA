@@ -32,7 +32,7 @@ private slots:
 
     void on_documentPath_editingFinished();
 
-    void on_uartRecvText_copyAvailable(bool b);
+    //void on_uartRecvText_copyAvailable(bool b);
 
 private:
     Ui::MainWindow *ui;
@@ -40,5 +40,14 @@ private:
 
     void initPort();
 };
+
+#pragma  pack(1)
+typedef struct {
+    unsigned short header;
+    unsigned char cmd;
+    unsigned int version;
+    unsigned int pkgSize;
+} cmdStart;
+#pragma pack ()
 
 #endif // MAINWINDOW_H
