@@ -28,6 +28,12 @@ private slots:
 
     void on_hexStringButton_clicked();
 
+    void on_browseButton_clicked();
+
+    void on_documentPath_editingFinished();
+
+    void on_uartRecvText_copyAvailable(bool b);
+
 private:
     Ui::MainWindow *ui;
     QSerialPort serial;
