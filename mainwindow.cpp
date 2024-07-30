@@ -60,10 +60,16 @@ void MainWindow::on_uartOpenCloseBtn_clicked()
 
 void MainWindow::on_uartSendBtn_clicked()
 {
-    int numOfInput = serial.write(ui->uartSendText->toPlainText().toLatin1());   // 以ASCII码的形式通过串口发送出去
-    string statusShow = "the number of input is" + to_string(numOfInput);
+    //int numOfInput = serial.write(ui->uartSendText->toPlainText().toLatin1());   // 以ASCII码的形式通过串口发送出去
+    //string statusShow = "the number of input is" + to_string(numOfInput);
 
-    ui->statusBar->showMessage(QString::fromLocal8Bit(statusShow.c_str()), 2000);
+    //ui->statusBar->showMessage(QString::fromLocal8Bit(statusShow.c_str()), 2000);
+    //QString tmp = "s";
+    //QByteArray data();
+    //int numOfInput = serial.write(tmp.toLatin1());   // 以ASCII码的形式通过串口发送出去
+    char buf[32] = {0};
+    buf[0] = 0x1A;
+    int numOfInput = serial.write(buf, 1);   // 以ASCII码的形式通过串口发送出去
 }
 
 void MainWindow::initPort()
