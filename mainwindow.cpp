@@ -59,7 +59,7 @@ int MainWindow::tansferData(unsigned short pckIdx)
     if (pckIdx == transNum) {
         *(unsigned short *)(buf + OFFSET_IDX) = transNum;
         memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (transNum - 1)), lastPckSize);
-        serial.write(buf, lastPckSize + SZ_OVER_HEAD); // pckSize + overhead(3)
+        serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
     }
     free(buf);
 #if 0
@@ -113,12 +113,28 @@ int MainWindow::tansferData(unsigned short pckIdx)
 void MainWindow::readCom()
 {
     QByteArray temp = serial.readAll();
+    /* Display reived data in textBox */
+    if(!temp.isEmpty()){
+        if(ui->hexStringButton->text() == "String"){
+            ui->uartRecvText->insertPlainText(temp);
+            ui->uartRecvText->insertPlainText("\n");
+        }else{
+            //            temp = serial.readAll();
+            ui->uartRecvText->insertPlainText("0x");
+            ui->uartRecvText->insertPlainText(temp.toHex());
+            ui->uartRecvText->insertPlainText("\n");
+        }
+    }else{
+        qDebug() << "temp is empty" << endl;
+    }
+
+
     if (temp.at(0) == 0x1A) {
         if (temp.at(1) == 0x0) {
             pckSize = *(unsigned short *)(temp.data() + 2);
             qDebug() << "Negotiated package size:" << (int)temp[2] << endl;
             connect(this, SIGNAL(sendDdataSig()), this, SLOT(tansferData()));
-            emit sendDdataSig(currentPckIdx); // send first data package
+            emit sendDataSig(currentPckIdx); 			// send first data package
             qDebug() << "Send fist data package" << endl;
             return;
         } else {
@@ -128,7 +144,7 @@ void MainWindow::readCom()
     } else if (temp.at(0) == 0x1B) {
         currentPckIdx = *(unsigned short *)(temp.data() + SZ_CMD);
         if (currentPckIdx > 0) {
-            emit sendDdataSig(++currentPckIdx); // send first data package
+            emit sendDataSig(++currentPckIdx); 		// send first data package
             qDebug() << "Send" << currentPckIdx << "th package" << endl;
 
             /* If the last package trans success */
@@ -186,6 +202,13 @@ void MainWindow::on_uartOpenCloseBtn_clicked()
 
 void MainWindow::on_uartSendBtn_clicked()
 {
+    //int numOfInput = serial.write(ui->uartSendText->toPlainText().toLatin1());   // 以ASCII码的形式通过串口发送出去
+    //string statusShow = "the number of input is" + to_string(numOfInput);
+
+    //ui->statusBar->showMessage(QString::fromLocal8Bit(statusShow.c_str()), 2000);
+    //QString tmp = "s";
+    //QByteArray data();
+    //int numOfInput = serial.write(tmp.toLatin1());   // 以ASCII码的形式通过串口发送出去
     /* Open firmware file */
     QString filePath = ui->documentPath->text();
     if(filePath.isEmpty()){
