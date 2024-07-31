@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <QFile>
 
 
 namespace Ui {
@@ -39,6 +40,9 @@ private:
     QSerialPort serial;
 
     void initPort();
+    QFile firmwareFile;
+    QByteArray firmwareData;
+    bool transferComplete;
 };
 
 #pragma  pack(1)
@@ -48,6 +52,21 @@ typedef struct {
     unsigned int version;
     unsigned int pkgSize;
 } cmdStart;
+
+typedef struct{
+    unsigned short header;
+    unsigned char cmd;
+    unsigned int id;
+    unsigned char data;
+} cmdSend;
+
+typedef struct{
+    unsigned short header;
+    unsigned char cmd;
+    unsigned int checkSum;
+} cmdFinish;
+
 #pragma pack ()
+
 
 #endif // MAINWINDOW_H
