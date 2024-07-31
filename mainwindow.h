@@ -6,7 +6,6 @@
 #include <QSerialPortInfo>
 #include <QFile>
 
-
 namespace Ui {
 class MainWindow;
 }
@@ -33,7 +32,11 @@ private slots:
 
     void on_documentPath_editingFinished();
 
+    int tansferData(unsigned short pckIdx);
     //void on_uartRecvText_copyAvailable(bool b);
+
+signals:
+    void sendDdataSig(int pckIdx);
 
 private:
     Ui::MainWindow *ui;
@@ -43,6 +46,11 @@ private:
     QFile firmwareFile;
     QByteArray firmwareData;
     bool transferComplete;
+    unsigned short pckSize;
+    unsigned int fileLen;
+    unsigned short transNum; // 传输次数
+    unsigned short currentPckIdx;
+    unsigned short crc16;
 };
 
 #pragma  pack(1)
@@ -56,7 +64,7 @@ typedef struct {
 typedef struct{
     unsigned short header;
     unsigned char cmd;
-    unsigned int id;
+    unsigned short id;
     unsigned char data;
 } cmdSend;
 
@@ -68,5 +76,10 @@ typedef struct{
 
 #pragma pack ()
 
+typedef enum {
+    START_CMD = 0X1A,
+    SEND_CMD = 0X1B,
+    FINISH_CMD = 0X1C,
+} cmd;
 
 #endif // MAINWINDOW_H
