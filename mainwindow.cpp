@@ -133,7 +133,7 @@ void MainWindow::readCom()
         if (temp.at(1) == 0x0) {
             pckSize = *(unsigned short *)(temp.data() + 2);
             qDebug() << "Negotiated package size:" << (int)temp[2] << endl;
-            connect(this, SIGNAL(sendDdataSig()), this, SLOT(tansferData()));
+            connect(this, SIGNAL(sendDataSig(unsigned short)), this, SLOT(tansferData(unsigned short)));
             emit sendDataSig(currentPckIdx); 			// send first data package
             qDebug() << "Send fist data package" << endl;
             return;

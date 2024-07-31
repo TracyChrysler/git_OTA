@@ -36,7 +36,7 @@ private slots:
     //void on_uartRecvText_copyAvailable(bool b);
 
 signals:
-    void sendDataSig(int pckIdx);
+    void sendDataSig(unsigned short pckIdx);
 
 private:
     Ui::MainWindow *ui;
