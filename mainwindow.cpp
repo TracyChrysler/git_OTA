@@ -50,7 +50,7 @@ int MainWindow::tansferData(unsigned short pckIdx)
     unsigned short lastPckSize = fileLen % pckSize ? fileLen % pckSize : pckSize;
 
     *(unsigned short *)buf = HEADER; 					// Header 2 Bytes
-    *(buf + OFFSET_CMD) = 0x1B; 						// command of send data 1 Byte
+    *(buf + OFFSET_CMD) = SEND_CMD; 					// command of send data 1 Byte
     *(unsigned short *)(buf + OFFSET_IDX) = pckIdx; 	// index 2 Bytes
     memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), pckSize);
     serial.write(buf, pckSize + SZ_OVER_HEAD); 			// pckSize + overhead(3)
@@ -62,52 +62,6 @@ int MainWindow::tansferData(unsigned short pckIdx)
         serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
     }
     free(buf);
-#if 0
-    // 发送第二条命令
-    int dataSend = 0;
-    int pkgSize = (int)temp[2];
-    int pkgId = 1;
-    transferComplete = false;
-    while(!transferComplete){
-        if(dataSend >= firmwareData.size()){
-            qDebug() << "file transfer completed"<< endl;
-            transferComplete = true;
-            return;
-        }
-
-        int bytesToSend = qMin(pkgSize, firmwareData.size() - dataSend);
-        for(int i = 0; i < bytesToSend; i++){
-            cmdSend sendCmd;
-            sendCmd.header = 0x55AA; // 将帧头0xAA55字节顺序转换
-            sendCmd.cmd = 0x1B;
-            sendCmd.id = pkgId++;
-            sendCmd.data= static_cast<unsigned char>(firmwareData[dataSend + i]);
-            serial.write((char *)(&sendCmd), 95);
-
-            if(!serial.waitForBytesWritten(100)){
-                qDebug() << "Failed to write data"<< endl;
-                return;
-            }
-
-            if(serial.waitForReadyRead(100)){
-                QByteArray sendTemp = serial.readAll();
-                if(sendTemp.at(0) == 0x1B){
-                    if(sendTemp.at(1) == 0){
-                        qDebug() << "Error received,terminating"<< endl;
-                        return;
-                    }
-                }else{
-                    qDebug() << "Invaild response."<< endl;
-                    return;
-                }
-            }else{
-                qDebug() << "No response."<< endl;
-                return;
-            }
-        }
-        dataSend += bytesToSend;
-    }
-#endif
 }
 
 void MainWindow::readCom()
@@ -128,12 +82,11 @@ void MainWindow::readCom()
         qDebug() << "temp is empty" << endl;
     }
 
-
-    if (temp.at(0) == 0x1A) {
+    if (temp.at(0) == START_CMD) {
         if (temp.at(1) == 0x0) {
             pckSize = *(unsigned short *)(temp.data() + 2);
             qDebug() << "Negotiated package size:" << (int)temp[2] << endl;
-            connect(this, SIGNAL(sendDdataSig()), this, SLOT(tansferData()));
+            connect(this, SIGNAL(sendDataSig(unsigned short)), this, SLOT(tansferData(unsigned short)));
             emit sendDataSig(currentPckIdx); 			// send first data package
             qDebug() << "Send fist data package" << endl;
             return;
@@ -141,10 +94,10 @@ void MainWindow::readCom()
             qDebug() << "This version of firmware cannot be upgrade" << endl;
             return;
         }
-    } else if (temp.at(0) == 0x1B) {
+    } else if (temp.at(0) == SEND_CMD) {
         currentPckIdx = *(unsigned short *)(temp.data() + SZ_CMD);
         if (currentPckIdx > 0) {
-            emit sendDataSig(++currentPckIdx); 		// send first data package
+            emit sendDataSig(++currentPckIdx);
             qDebug() << "Send" << currentPckIdx << "th package" << endl;
 
             /* If the last package trans success */
@@ -163,14 +116,14 @@ void MainWindow::readCom()
             qDebug() << "Tans" << currentPckIdx << "th failed" << endl;
             return;
         }
-    } else if (temp.at(0) == 0x1C) {
+    } else if (temp.at(0) == FINISH_CMD) {
         if(temp.at(1) == 0){
             qDebug() << "Upgrade successfully" << endl;
         }else{
             qDebug() << "Upgrade failed" << endl;
         }
     } else {
-        qDebug() << "Recived garbage cmd:" << temp[0] << endl;
+        qDebug() << "Recived garbage cmd:" << temp.at(0) << endl;
     }
 }
 
@@ -202,13 +155,6 @@ void MainWindow::on_uartOpenCloseBtn_clicked()
 
 void MainWindow::on_uartSendBtn_clicked()
 {
-    //int numOfInput = serial.write(ui->uartSendText->toPlainText().toLatin1());   // 以ASCII码的形式通过串口发送出去
-    //string statusShow = "the number of input is" + to_string(numOfInput);
-
-    //ui->statusBar->showMessage(QString::fromLocal8Bit(statusShow.c_str()), 2000);
-    //QString tmp = "s";
-    //QByteArray data();
-    //int numOfInput = serial.write(tmp.toLatin1());   // 以ASCII码的形式通过串口发送出去
     /* Open firmware file */
     QString filePath = ui->documentPath->text();
     if(filePath.isEmpty()){
@@ -239,9 +185,6 @@ void MainWindow::on_uartSendBtn_clicked()
     //55 AA 1A 01 00 00 00 B4 78 00 00
     //55 AA 1A
 
-    //for (int i = 0; i < sizeof(cmdStart); i++) {
-    //    serial.write((char *)((&startCmd) + 1), 1);   // 以ASCII码的形式通过串口发送出去
-    //}
     serial.write((char *)(&startCmd), sizeof(cmdStart));
     qDebug() << "data size:" << sizeof(cmdStart) << endl;
     currentPckIdx = 1;

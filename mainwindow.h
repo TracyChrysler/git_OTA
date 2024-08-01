@@ -36,7 +36,7 @@ private slots:
     //void on_uartRecvText_copyAvailable(bool b);
 
 signals:
-    void sendDataSig(int pckIdx);
+    void sendDataSig(unsigned short pckIdx);
 
 private:
     Ui::MainWindow *ui;
@@ -74,12 +74,11 @@ typedef struct{
     unsigned int checkSum;
 } cmdFinish;
 
-#pragma pack ()
-
 typedef enum {
     START_CMD = 0X1A,
     SEND_CMD = 0X1B,
     FINISH_CMD = 0X1C,
 } cmd;
 
+#pragma pack ()
 #endif // MAINWINDOW_H
