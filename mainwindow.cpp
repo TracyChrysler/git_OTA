@@ -66,6 +66,7 @@ int MainWindow::tansferData(unsigned short pckIdx)
 
 void MainWindow::readCom()
 {
+    qDebug() << "enter readCom" << endl;
     QByteArray temp = serial.readAll();
     /* Display reived data in textBox */
     if(!temp.isEmpty()){
@@ -97,9 +98,6 @@ void MainWindow::readCom()
     } else if (temp.at(0) == SEND_CMD) {
         currentPckIdx = *(unsigned short *)(temp.data() + SZ_CMD);
         if (currentPckIdx > 0) {
-            emit sendDataSig(++currentPckIdx);
-            qDebug() << "Send" << currentPckIdx << "th package" << endl;
-
             /* If the last package trans success */
             if (currentPckIdx == transNum) {
                 // trans 3th cmd
@@ -109,8 +107,13 @@ void MainWindow::readCom()
                 finishCmd.cmd = FINISH_CMD;
                 finishCmd.checkSum = crc16;
                 serial.write((char *)&finishCmd, sizeof(cmdFinish));
+                qDebug() << "Send" << currentPckIdx << "th package" << endl;
                 qDebug() << "Finish cmd has been transed" << endl;
+                return;
             }
+            emit sendDataSig(++currentPckIdx);
+            qDebug() << "Send" << currentPckIdx << "th package" << endl;
+
             return;
         } else {
             qDebug() << "Tans" << currentPckIdx << "th failed" << endl;
