@@ -74,12 +74,11 @@ typedef struct{
     unsigned int checkSum;
 } cmdFinish;
 
-#pragma pack ()
-
 typedef enum {
     START_CMD = 0X1A,
     SEND_CMD = 0X1B,
     FINISH_CMD = 0X1C,
 } cmd;
 
+#pragma pack ()
 #endif // MAINWINDOW_H
