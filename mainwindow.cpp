@@ -103,11 +103,15 @@ void MainWindow::readCom()
                 // trans 3th cmd
                 cmdFinish finishCmd;
                 crc16 = crc16_ccitt(firmwareData);
+                qDebug() << "checkSum is:" << crc16 << endl;
                 finishCmd.header = HEADER;
                 finishCmd.cmd = FINISH_CMD;
                 finishCmd.checkSum = crc16;
                 serial.write((char *)&finishCmd, sizeof(cmdFinish));
                 qDebug() << "Send" << currentPckIdx << "th package" << endl;
+                qDebug() << "finishCmd(header:" << finishCmd.header
+                                 << ", cmd:" << finishCmd.cmd
+                                 << ", checkSum:" << finishCmd.checkSum << ")";
                 qDebug() << "Finish cmd has been transed" << endl;
                 return;
             }
