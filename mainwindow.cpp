@@ -108,7 +108,6 @@ void MainWindow::readCom()
            return;
         }
         qDebug() << "recieved id:" << id << endl;
-        qDebug() << "recieved transNum:" << *(int *)(temp.data() + 3) << endl;
         currentPckIdx = *(unsigned short *)(temp.data() + SZ_CMD);
         if (currentPckIdx > 0) {
             /* If the last package trans success */
@@ -120,7 +119,16 @@ void MainWindow::readCom()
                 finishCmd.header = HEADER;
                 finishCmd.cmd = FINISH_CMD;
                 finishCmd.checkSum = crc16;
-                serial.write((char *)&finishCmd, sizeof(cmdFinish));
+                char buf[7];
+                buf[0] = 0xAA;
+                buf[1] = 0x55;
+                buf[2] = 0x1C;
+                buf[3] = 0x55;
+                buf[4] = 0xAA;
+                buf[5] = 0x55;
+                buf[6] = 0x55;
+                //serial.write((char *)&finishCmd, sizeof(cmdFinish));
+                serial.write(buf, 7);
                 qDebug() << "Send" << currentPckIdx << "th package" << endl;
                 qDebug() << "finishCmd(header:" << finishCmd.header
                                  << ", cmd:" << finishCmd.cmd
