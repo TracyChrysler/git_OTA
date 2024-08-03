@@ -46,19 +46,19 @@ int MainWindow::tansferData(unsigned short pckIdx)
 #define OFFSET_DATA 5
 
     char *buf = (char *)malloc(pckSize + SZ_OVER_HEAD);
-
-    /* if last data package */
-    if (pckIdx == transNum) {
-        *(unsigned short *)(buf + OFFSET_IDX) = transNum;
-        memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (transNum - 1)), lastPckSize);
-        serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
-        qDebug() << "Send the last package" << endl;
-        return 0;
-    }
-
     *(unsigned short *)buf = HEADER; 					// Header 2 Bytes
     *(buf + OFFSET_CMD) = SEND_CMD; 					// command of send data 1 Byte
     *(unsigned short *)(buf + OFFSET_IDX) = pckIdx; 	// index 2 Bytes
+
+    /* if last data package */
+    if (pckIdx == transNum) {
+        memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), lastPckSize);
+        serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
+        qDebug() << "Send the last package" << endl;
+        free(buf);
+        return 0;
+    }
+
     memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), pckSize);
     serial.write(buf, pckSize + SZ_OVER_HEAD); 			// pckSize + overhead(3)
     qDebug() << "Send" << currentPckIdx << "th package" << endl;
@@ -91,8 +91,9 @@ void MainWindow::readCom()
             pckSize = *(unsigned short *)(temp.data() + 2);
             // calculate package size
             transNum = (fileLen % pckSize) ? (fileLen + pckSize) / pckSize : fileLen / pckSize;
-            qDebug() << "the trans num is:" << transNum << endl;
             lastPckSize = fileLen % pckSize ? fileLen % pckSize : pckSize;
+            qDebug() << "the trans num is:" << transNum << endl;
+            qDebug() << "last package size:" << lastPckSize << endl;
             qDebug() << "Negotiated package size:" << (int)temp[2] << endl;
             connect(this, SIGNAL(sendDataSig(unsigned short)), this, SLOT(tansferData(unsigned short)));
             emit sendDataSig(currentPckIdx); 			// send first data package
@@ -119,16 +120,7 @@ void MainWindow::readCom()
                 finishCmd.header = HEADER;
                 finishCmd.cmd = FINISH_CMD;
                 finishCmd.checkSum = crc16;
-                char buf[7];
-                buf[0] = 0xAA;
-                buf[1] = 0x55;
-                buf[2] = 0x1C;
-                buf[3] = 0x55;
-                buf[4] = 0xAA;
-                buf[5] = 0x55;
-                buf[6] = 0x55;
-                //serial.write((char *)&finishCmd, sizeof(cmdFinish));
-                serial.write(buf, 7);
+                serial.write((char *)&finishCmd, sizeof(cmdFinish));
                 qDebug() << "Send" << currentPckIdx << "th package" << endl;
                 qDebug() << "finishCmd(header:" << finishCmd.header
                                  << ", cmd:" << finishCmd.cmd
