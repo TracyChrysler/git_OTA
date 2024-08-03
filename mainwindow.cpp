@@ -45,28 +45,31 @@ int MainWindow::tansferData(unsigned short pckIdx)
 #define OFFSET_IDX 3
 #define OFFSET_DATA 5
 
-    transNum = (fileLen % pckSize) ? (fileLen + pckSize) / pckSize : fileLen / pckSize;
     char *buf = (char *)malloc(pckSize + SZ_OVER_HEAD);
-    unsigned short lastPckSize = fileLen % pckSize ? fileLen % pckSize : pckSize;
+
+    /* if last data package */
+    if (pckIdx == transNum) {
+        *(unsigned short *)(buf + OFFSET_IDX) = transNum;
+        memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (transNum - 1)), lastPckSize);
+        serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
+        qDebug() << "Send the last package" << endl;
+        return 0;
+    }
 
     *(unsigned short *)buf = HEADER; 					// Header 2 Bytes
     *(buf + OFFSET_CMD) = SEND_CMD; 					// command of send data 1 Byte
     *(unsigned short *)(buf + OFFSET_IDX) = pckIdx; 	// index 2 Bytes
     memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), pckSize);
     serial.write(buf, pckSize + SZ_OVER_HEAD); 			// pckSize + overhead(3)
+    qDebug() << "Send" << currentPckIdx << "th package" << endl;
 
-    /* last data package */
-    if (pckIdx == transNum) {
-        *(unsigned short *)(buf + OFFSET_IDX) = transNum;
-        memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (transNum - 1)), lastPckSize);
-        serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
-    }
     free(buf);
+    return 0;
 }
 
 void MainWindow::readCom()
 {
-    qDebug() << "enter readCom" << endl;
+    //qDebug() << "enter readCom" << endl;
     QByteArray temp = serial.readAll();
     /* Display reived data in textBox */
     if(!temp.isEmpty()){
@@ -86,6 +89,10 @@ void MainWindow::readCom()
     if (temp.at(0) == START_CMD) {
         if (temp.at(1) == 0x0) {
             pckSize = *(unsigned short *)(temp.data() + 2);
+            // calculate package size
+            transNum = (fileLen % pckSize) ? (fileLen + pckSize) / pckSize : fileLen / pckSize;
+            qDebug() << "the trans num is:" << transNum << endl;
+            lastPckSize = fileLen % pckSize ? fileLen % pckSize : pckSize;
             qDebug() << "Negotiated package size:" << (int)temp[2] << endl;
             connect(this, SIGNAL(sendDataSig(unsigned short)), this, SLOT(tansferData(unsigned short)));
             emit sendDataSig(currentPckIdx); 			// send first data package
@@ -96,6 +103,12 @@ void MainWindow::readCom()
             return;
         }
     } else if (temp.at(0) == SEND_CMD) {
+        unsigned short id = *(unsigned short *)(temp.data() + 1);
+        if (id <= 0x0) {
+           return;
+        }
+        qDebug() << "recieved id:" << id << endl;
+        qDebug() << "recieved transNum:" << *(int *)(temp.data() + 3) << endl;
         currentPckIdx = *(unsigned short *)(temp.data() + SZ_CMD);
         if (currentPckIdx > 0) {
             /* If the last package trans success */
@@ -116,7 +129,6 @@ void MainWindow::readCom()
                 return;
             }
             emit sendDataSig(++currentPckIdx);
-            qDebug() << "Send" << currentPckIdx << "th package" << endl;
 
             return;
         } else {

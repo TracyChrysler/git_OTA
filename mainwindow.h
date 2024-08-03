@@ -51,6 +51,7 @@ private:
     unsigned short transNum; // 传输次数
     unsigned short currentPckIdx;
     unsigned short crc16;
+    unsigned short lastPckSize;
 };
 
 #pragma  pack(1)
