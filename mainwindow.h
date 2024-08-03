@@ -66,7 +66,7 @@ typedef struct{
     unsigned short header;
     unsigned char cmd;
     unsigned short id;
-    unsigned char data;
+    unsigned short crc16;
 } cmdSend;
 
 typedef struct{

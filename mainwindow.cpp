@@ -20,16 +20,16 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-unsigned short crc16_ccitt(const QByteArray &data)
+uint16_t calculate_crc16_ccitt(char *data, uint16_t length)
 {
-    unsigned short crc = 0xFFFF;
-    for (int i = 0; i < data.size(); ++i) {
-        crc ^= static_cast<unsigned char>(data[i]) << 8;
-        for (int j = 0; j < 8; ++j) {
+    uint16_t crc = 0xFFFF;
+    for (uint16_t i = 0; i < length; ++i) {
+        crc ^= (uint16_t)data[i] << 8;
+        for (uint8_t j = 0; j < 8; ++j) {
             if (crc & 0x8000) {
                 crc = (crc << 1) ^ 0x1021;
             } else {
-                crc = crc << 1;
+                crc <<= 1;
             }
         }
     }
@@ -38,20 +38,22 @@ unsigned short crc16_ccitt(const QByteArray &data)
 
 int MainWindow::tansferData(unsigned short pckIdx)
 {
-#define SZ_OVER_HEAD 5
+#define SZ_OVER_HEAD 7
 #define SZ_CMD 1
 #define HEADER 0X55AA
 #define OFFSET_CMD 2
 #define OFFSET_IDX 3
-#define OFFSET_DATA 5
+#define OFFSET_CRC16 5
+#define OFFSET_DATA 7
 
     char *buf = (char *)malloc(pckSize + SZ_OVER_HEAD);
-    *(unsigned short *)buf = HEADER; 					// Header 2 Bytes
-    *(buf + OFFSET_CMD) = SEND_CMD; 					// command of send data 1 Byte
-    *(unsigned short *)(buf + OFFSET_IDX) = pckIdx; 	// index 2 Bytes
+    *(unsigned short *)buf = HEADER;
+    *(buf + OFFSET_CMD) = SEND_CMD;
+    *(unsigned short *)(buf + OFFSET_IDX) = pckIdx;
 
     /* if last data package */
     if (pckIdx == transNum) {
+        *(unsigned short *)(buf + OFFSET_CRC16) = calculate_crc16_ccitt(firmwareData.data() + (currentPckIdx - 1) * pckSize, lastPckSize);
         memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), lastPckSize);
         serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
         qDebug() << "Send the last package" << endl;
@@ -59,6 +61,7 @@ int MainWindow::tansferData(unsigned short pckIdx)
         return 0;
     }
 
+    *(unsigned short *)(buf + OFFSET_CRC16) = calculate_crc16_ccitt(firmwareData.data() + (currentPckIdx - 1) * pckSize, pckSize);
     memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), pckSize);
     serial.write(buf, pckSize + SZ_OVER_HEAD); 			// pckSize + overhead(3)
     qDebug() << "Send" << currentPckIdx << "th package" << endl;
@@ -106,6 +109,7 @@ void MainWindow::readCom()
     } else if (temp.at(0) == SEND_CMD) {
         unsigned short id = *(unsigned short *)(temp.data() + 1);
         if (id <= 0x0) {
+           qDebug() << "Checksum incorrect" << endl;
            return;
         }
         qDebug() << "recieved id:" << id << endl;
@@ -115,7 +119,6 @@ void MainWindow::readCom()
             if (currentPckIdx == transNum) {
                 // trans 3th cmd
                 cmdFinish finishCmd;
-                crc16 = crc16_ccitt(firmwareData);
                 qDebug() << "checkSum is:" << crc16 << endl;
                 finishCmd.header = HEADER;
                 finishCmd.cmd = FINISH_CMD;
