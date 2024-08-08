@@ -38,15 +38,16 @@ uint16_t calculate_crc16_ccitt(char *data, uint16_t length)
 
 int MainWindow::tansferData(unsigned short pckIdx)
 {
-#define SZ_OVER_HEAD 7
+#define SZ_OVERHEAD 8
 #define SZ_CMD 1
 #define HEADER 0X55AA
 #define OFFSET_CMD 2
 #define OFFSET_IDX 3
 #define OFFSET_CRC16 5
-#define OFFSET_DATA 7
+#define OFFSET_ALIGN 7
+#define OFFSET_DATA 8
 
-    char *buf = (char *)malloc(pckSize + SZ_OVER_HEAD);
+    char *buf = (char *)malloc(pckSize + SZ_OVERHEAD);
     *(unsigned short *)buf = HEADER;
     *(buf + OFFSET_CMD) = SEND_CMD;
     *(unsigned short *)(buf + OFFSET_IDX) = pckIdx;
@@ -54,16 +55,18 @@ int MainWindow::tansferData(unsigned short pckIdx)
     /* if last data package */
     if (pckIdx == transNum) {
         *(unsigned short *)(buf + OFFSET_CRC16) = calculate_crc16_ccitt(firmwareData.data() + (currentPckIdx - 1) * pckSize, lastPckSize);
+        *(buf + OFFSET_ALIGN) = 0;
         memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), lastPckSize);
-        serial.write(buf, lastPckSize + SZ_OVER_HEAD);	// pckSize + overhead(3)
+        serial.write(buf, lastPckSize + SZ_OVERHEAD);	// pckSize + overhead(3)
         qDebug() << "Send the last package" << endl;
         free(buf);
         return 0;
     }
 
     *(unsigned short *)(buf + OFFSET_CRC16) = calculate_crc16_ccitt(firmwareData.data() + (currentPckIdx - 1) * pckSize, pckSize);
+    *(buf + OFFSET_ALIGN) = 0;
     memcpy(buf + OFFSET_DATA, firmwareData.data() + (pckSize * (pckIdx - 1)), pckSize);
-    serial.write(buf, pckSize + SZ_OVER_HEAD); 			// pckSize + overhead(3)
+    serial.write(buf, pckSize + SZ_OVERHEAD); 			// pckSize + overhead(3)
     qDebug() << "Send" << currentPckIdx << "th package" << endl;
 
     free(buf);
@@ -124,7 +127,7 @@ void MainWindow::readCom()
                 finishCmd.cmd = FINISH_CMD;
                 finishCmd.checkSum = crc16;
                 serial.write((char *)&finishCmd, sizeof(cmdFinish));
-                qDebug() << "Send" << currentPckIdx << "th package" << endl;
+                // qDebug() << "Send" << currentPckIdx << "th package" << endl;
                 qDebug() << "finishCmd(header:" << finishCmd.header
                                  << ", cmd:" << finishCmd.cmd
                                  << ", checkSum:" << finishCmd.checkSum << ")";
