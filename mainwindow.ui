@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>837</width>
-    <height>563</height>
+    <width>733</width>
+    <height>362</height>
    </rect>
   </property>
   <property name="font">
@@ -224,10 +224,10 @@
    <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
-      <x>540</x>
-      <y>20</y>
-      <width>251</width>
-      <height>241</height>
+      <x>260</x>
+      <y>130</y>
+      <width>411</width>
+      <height>131</height>
      </rect>
     </property>
     <property name="font">
@@ -292,10 +292,10 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>265</x>
+      <x>260</x>
       <y>20</y>
-      <width>261</width>
-      <height>241</height>
+      <width>411</width>
+      <height>101</height>
      </rect>
     </property>
     <property name="font">
@@ -308,47 +308,30 @@
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QTextEdit" name="uartSendText">
-       <property name="font">
-        <font>
-         <family>Nirmala UI</family>
-        </font>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="uartSendBtn">
-       <property name="font">
-        <font>
-         <family>Nirmala UI</family>
-        </font>
-       </property>
-       <property name="text">
-        <string>Send</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="gridLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>60</x>
-      <y>280</y>
-      <width>461</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_3">
-     <item row="0" column="0">
-      <widget class="QLineEdit" name="documentPath"/>
-     </item>
-     <item row="0" column="1">
-      <widget class="QPushButton" name="browseButton">
-       <property name="text">
-        <string>Browse</string>
-       </property>
-      </widget>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="QLineEdit" name="documentPath"/>
+       </item>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="browseButton">
+         <property name="text">
+          <string>Browse</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QPushButton" name="uartSendBtn">
+         <property name="font">
+          <font>
+           <family>Nirmala UI</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>Send</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </widget>
@@ -358,8 +341,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>837</width>
-     <height>21</height>
+     <width>733</width>
+     <height>23</height>
     </rect>
    </property>
   </widget>
