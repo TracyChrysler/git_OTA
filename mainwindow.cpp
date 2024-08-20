@@ -75,19 +75,19 @@ void MainWindow::readCom()
     //qDebug() << "enter readCom" << endl;
     QByteArray temp = serial.readAll();
     /* Display reived data in textBox */
-    if(!temp.isEmpty()){
-        if(ui->hexStringButton->text() == "String"){
-            ui->uartRecvText->insertPlainText(temp);
-            ui->uartRecvText->insertPlainText("\n");
-        }else{
-            //            temp = serial.readAll();
-            ui->uartRecvText->insertPlainText("0x");
-            ui->uartRecvText->insertPlainText(temp.toHex());
-            ui->uartRecvText->insertPlainText("\n");
-        }
-    }else{
-        qDebug() << "temp is empty" << endl;
-    }
+    //if(!temp.isEmpty()){
+    //    if(ui->hexStringButton->text() == "String"){
+    //        ui->uartRecvText->insertPlainText(temp);
+    //        ui->uartRecvText->insertPlainText("\n");
+    //    }else{
+    //        //            temp = serial.readAll();
+    //        ui->uartRecvText->insertPlainText("0x");
+    //        ui->uartRecvText->insertPlainText(temp.toHex());
+    //        ui->uartRecvText->insertPlainText("\n");
+    //    }
+    //}else{
+    //    qDebug() << "temp is empty" << endl;
+    //}
 
     if (temp.at(0) == START_CMD) {
         if (temp.at(1) == 0x0) {
@@ -241,18 +241,18 @@ void MainWindow::initPort()
 }
 
 
-void MainWindow::on_recvClearBtn_clicked()
-{
-    ui->uartRecvText->clear();
-}
+//void MainWindow::on_recvClearBtn_clicked()
+//{
+//    ui->uartRecvText->clear();
+//}
 
-void MainWindow::on_hexStringButton_clicked()
-{
-    if(ui->hexStringButton->text() == "String")
-        ui->hexStringButton->setText("Hex");
-    else
-        ui->hexStringButton->setText("String");
-}
+//void MainWindow::on_hexStringButton_clicked()
+//{
+//    if(ui->hexStringButton->text() == "String")
+//        ui->hexStringButton->setText("Hex");
+//    else
+//        ui->hexStringButton->setText("String");
+//}
 
 void MainWindow::on_browseButton_clicked()
 {

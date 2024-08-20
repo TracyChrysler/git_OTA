@@ -24,9 +24,9 @@ private slots:
 
     void on_uartSendBtn_clicked();
 
-    void on_recvClearBtn_clicked();
+    //void on_recvClearBtn_clicked();
 
-    void on_hexStringButton_clicked();
+    //void on_hexStringButton_clicked();
 
     void on_browseButton_clicked();
 
