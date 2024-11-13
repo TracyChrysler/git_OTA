@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <stdlib.h>
+#include <unistd.h>
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -152,7 +153,6 @@ void MainWindow::readCom()
     }
 }
 
-
 void MainWindow::on_uartOpenCloseBtn_clicked()
 {
     if(ui->portNameCombo->isEnabled()){
@@ -212,6 +212,8 @@ void MainWindow::on_uartSendBtn_clicked()
 
     serial.write((char *)(&startCmd), sizeof(cmdStart));
     qDebug() << "data size:" << sizeof(cmdStart) << endl;
+    //sleep(2);
+    //serial.write((char *)(&startCmd), sizeof(cmdStart));
     currentPckIdx = 1;
 }
 
