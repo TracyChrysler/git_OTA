@@ -45,6 +45,7 @@ private:
     void initPort();
     QFile firmwareFile;
     QByteArray firmwareData;
+    uint8_t checkSum(uint8_t * buf ,uint32_t len);
     bool transferComplete;
     unsigned short pckSize;
     unsigned int fileLen;
@@ -56,23 +57,32 @@ private:
 
 #pragma  pack(1)
 typedef struct {
-    unsigned short header;
-    unsigned char cmd;
-    unsigned int version;
-    unsigned int pkgSize;
+    uint16_t header;
+    uint8_t address;
+    uint8_t cmd;
+    uint8_t dataLen;
+    union {
+        uint8_t v[3];
+        unsigned int version:24;
+    };
+    uint32_t pckSize;
+    uint8_t checksum;
 } cmdStart;
 
 typedef struct{
-    unsigned short header;
-    unsigned char cmd;
-    unsigned short id;
-    unsigned short crc16;
+    uint16_t header;
+    uint8_t cmd;
+    uint16_t id;
+    uint16_t crc16;
 } cmdSend;
 
 typedef struct{
-    unsigned short header;
-    unsigned char cmd;
-    unsigned int checkSum;
+    uint16_t header;
+    uint8_t address;
+    uint8_t cmd;
+    uint8_t dataLen;
+    uint32_t crc;
+    uint8_t checksum;
 } cmdFinish;
 
 typedef enum {
