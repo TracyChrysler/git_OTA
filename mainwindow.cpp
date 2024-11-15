@@ -7,11 +7,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <QtEndian>
+#include <string.h>
+#include <QTimer>
 
 #define CMD_OFFSET 3
 #define DATA_OFFSET 5
 #define SZ_OVERHEAD 8
-#define HEADER 0XAA55
+#define HEADER 0X55AA
 #define ADDRESS_OFFSET 2
 #define DATALEN_OFFSET 4
 #define ADDRESS 0X15
@@ -28,6 +30,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    maxStart = 0;
+    maxSend = 1;
+    maxFinish = 1;
+    startTimer = new QTimer(this);
+    sendTimer = new QTimer(this);
+    finishTimer = new QTimer(this);
+    connect(startTimer, &QTimer::timeout, this, &MainWindow::on_uartSendBtn_clicked);
+    connect(finishTimer, &QTimer::timeout, this, &MainWindow::finishCmdSend);
     initPort();
 }
 
@@ -52,17 +62,42 @@ uint16_t calculate_crc16_ccitt(char *data, uint16_t length)
     return crc;
 }
 
+void MainWindow::finishCmdSend()
+{
+    maxFinish ++;
+    if(maxFinish == 80){
+        ui->uartRecvText->insertPlainText("finish update failed");
+        ui->uartRecvText->insertPlainText("\n");
+        return;
+    }
+    cmdFinish finishCmd;
+    qDebug() << "checkSum is:" << crc16 << endl;
+    finishCmd.header = HEADER;
+    finishCmd.address = ADDRESS;
+    finishCmd.cmd = FINISH_CMD;
+    finishCmd.dataLen = 4;
+    uint16_t crc = calculate_crc16_ccitt(firmwareData.data(), fileLen);
+    finishCmd.crc = (crc>> 24) & 0xFF;      // 高字节
+    finishCmd.crc |= ((crc >> 16) & 0xFF) << 8;  // 第二字节
+    finishCmd.crc |= ((crc >> 8) & 0xFF) << 16; // 第三字节
+    finishCmd.crc |= (crc & 0xFF) << 24;        // 低字节
+    finishCmd.checksum = checkSum((uint8_t *)(&finishCmd + ADDRESS_OFFSET), sizeof(cmdFinish) - 3);
+    serial.write((char *)&finishCmd, sizeof(cmdFinish));
+    qDebug() << "Finish cmd has been transed" << endl;
+}
+
 int MainWindow::tansferData(unsigned short pckIdx)
 {
     char *buf = (char *)malloc(pckSize + SZ_OVERHEAD);
-    *(unsigned short *)buf = qToBigEndian(HEADER);
+    *(unsigned short *)buf = HEADER;
     *(buf + ADDRESS_OFFSET) = ADDRESS;
     *(buf + CMD_OFFSET) = SEND_CMD;
-    *(unsigned short *)(buf + DATA_OFFSET) = pckIdx;
+    *(buf + DATA_OFFSET) = (pckIdx >> 8) & 0xFF;
+    *(buf + DATA_OFFSET) = (pckIdx << 8) & 0xFF00;
 
     /* if last data package */
     if (pckIdx == transNum) {
-        *(buf + DATALEN_OFFSET) = qToBigEndian(lastPckSize + SIZE_CURRENTINDEX);
+        *(buf + DATALEN_OFFSET) = lastPckSize + SIZE_CURRENTINDEX;
         memcpy(buf + DATA_OFFSET + SIZE_CURRENTINDEX, firmwareData.data() + (pckSize * (pckIdx - 1)), lastPckSize);
         *(buf + DATA_OFFSET + SIZE_CURRENTINDEX + lastPckSize) = checkSum((uint8_t *)buf + ADDRESS_OFFSET, lastPckSize + SIZE_CURRENTINDEX + 3);
         serial.write(buf, lastPckSize + SZ_OVERHEAD);	// pckSize + overhead(3)
@@ -71,7 +106,7 @@ int MainWindow::tansferData(unsigned short pckIdx)
         return 0;
     }
 
-    *(buf + DATALEN_OFFSET) = qToBigEndian(pckSize + SIZE_CURRENTINDEX);
+    *(buf + DATALEN_OFFSET) = pckSize + SIZE_CURRENTINDEX;
     memcpy(buf + DATA_OFFSET + SIZE_CURRENTINDEX, firmwareData.data() + (pckSize * (pckIdx - 1)), pckSize);
     *(buf + DATA_OFFSET + SIZE_CURRENTINDEX + pckSize) = checkSum((uint8_t *)buf + ADDRESS_OFFSET, pckSize + SIZE_CURRENTINDEX + 3);
     serial.write(buf, pckSize + SZ_OVERHEAD); 			// pckSize + overhead(3)
@@ -100,9 +135,9 @@ void MainWindow::readCom()
         qDebug() << "temp is empty" << endl;
     }
 
-
     if (temp.at(CMD_OFFSET) == START_CMD) {
         if (temp.at(DATA_OFFSET) == 0x0) {
+            startTimer->stop();
             pckSize = *(unsigned short *)(temp.data() + DATA_OFFSET + 1);
             // calculate package size
             transNum = (fileLen % pckSize) ? (fileLen + pckSize) / pckSize : fileLen / pckSize;
@@ -132,13 +167,19 @@ void MainWindow::readCom()
                 // trans 3th cmd
                 cmdFinish finishCmd;
                 qDebug() << "checkSum is:" << crc16 << endl;
-                finishCmd.header = qToBigEndian(HEADER);
+                finishCmd.header = HEADER;
                 finishCmd.address = ADDRESS;
                 finishCmd.cmd = FINISH_CMD;
-                finishCmd.crc = calculate_crc16_ccitt(firmwareData.data(), fileLen);
+                finishCmd.dataLen = 4;
+                uint16_t crc = calculate_crc16_ccitt(firmwareData.data(), fileLen);
+                finishCmd.crc = (crc>> 24) & 0xFF;      // 高字节
+                finishCmd.crc |= ((crc >> 16) & 0xFF) << 8;  // 第二字节
+                finishCmd.crc |= ((crc >> 8) & 0xFF) << 16; // 第三字节
+                finishCmd.crc |= (crc & 0xFF) << 24;        // 低字节
                 finishCmd.checksum = checkSum((uint8_t *)(&finishCmd + ADDRESS_OFFSET), sizeof(cmdFinish) - 3);
                 serial.write((char *)&finishCmd, sizeof(cmdFinish));
                 qDebug() << "Finish cmd has been transed" << endl;
+                finishTimer->start(3000);
                 return;
             }
             emit sendDataSig(++currentPckIdx);
@@ -150,6 +191,7 @@ void MainWindow::readCom()
         }
     } else if (temp.at(CMD_OFFSET) == FINISH_CMD) {
         if(temp.at(DATA_OFFSET) == 0){
+            finishTimer->stop();
             qDebug() << "Upgrade successfully" << endl;
         }else{
             qDebug() << "Upgrade failed" << endl;
@@ -208,16 +250,53 @@ void MainWindow::on_uartSendBtn_clicked()
     fileLen = firmwareData.size();
     qDebug() << "Firmare file loaded. size:" << fileLen << endl;
 
+    maxStart ++;
+    if (maxStart == 80) {
+        ui->uartRecvText->insertPlainText("start update failed");
+        ui->uartRecvText->insertPlainText("\n");
+        return;
+    }
+
     cmdStart startCmd;
-    startCmd.header = qToBigEndian(0xAA55); // 将帧头0xAA55字节顺序转换
-    startCmd.address = 0x15;
+    startCmd.header = HEADER;  // 转换大端
+    startCmd.address = ADDRESS;
     startCmd.cmd = START_CMD;
     startCmd.dataLen = 7;
-    startCmd.version = qto_data_filed_BigEndian(1);
-    startCmd.pckSize = qto_data_filed_BigEndian(fileLen);
-    startCmd.checksum = checkSum((uint8_t *)(&startCmd + 2), sizeof(cmdStart) - 3);
+    // 5. version (uint32_t -> 3字节位域)
+    unsigned int version = 1;
+    startCmd.v[0] = (version >> 16) & 0xFF;  // 高字节
+    startCmd.v[1] = (version >> 8) & 0xFF;   // 中字节
+    startCmd.v[2] = version & 0xFF;          // 低字节
+    startCmd.pckSize = (fileLen>> 24) & 0xFF;      // 高字节
+    startCmd.pckSize |= ((fileLen >> 16) & 0xFF) << 8;  // 第二字节
+    startCmd.pckSize |= ((fileLen >> 8) & 0xFF) << 16; // 第三字节
+    startCmd.pckSize |= (fileLen & 0xFF) << 24;        // 低字节
+    startCmd.checksum = checkSum((uint8_t *)(&startCmd) + 2, 10);
 
-    serial.write((char *)(&startCmd), sizeof(cmdStart));
+    //uint8_t buf[7] = {1, 2, 3, 4, 5, 6, 7};
+    //checkSum(buf, sizeof(buf));
+    // 将整个结构体转为 QByteArray
+    QByteArray byteArray(reinterpret_cast<char*>(&startCmd), sizeof(startCmd));
+
+    // 打印每个字节
+    for (int i = 0; i < byteArray.size(); ++i) {
+        qDebug() << "Byte " << i << ": " << QString::number((unsigned char)byteArray[i], 16).toUpper();
+    }
+
+    qint64 bytesWritten = serial.write((char *)(&startCmd), sizeof(startCmd));
+
+    if (bytesWritten == sizeof(startCmd)) {
+        // 成功：所有字节都已写入
+        ui->uartRecvText->insertPlainText("send successful");
+        ui->uartRecvText->insertPlainText("\n");
+        qDebug() << "数据发送成功。";
+        startTimer->start(1500);
+    } else {
+        // 失败：没有发送完整个字节
+        ui->uartRecvText->insertPlainText("send failed");
+        ui->uartRecvText->insertPlainText("\n");
+        qDebug() << "数据发送失败，已发送的字节数：" << bytesWritten;
+    }
     qDebug() << "data size:" << sizeof(cmdStart) << endl;
 
     currentPckIdx = 1;

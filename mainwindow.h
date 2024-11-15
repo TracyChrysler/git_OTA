@@ -41,11 +41,18 @@ signals:
 private:
     Ui::MainWindow *ui;
     QSerialPort serial;
+    QTimer *startTimer;
+    QTimer *sendTimer;
+    QTimer *finishTimer;
+    uint8_t maxStart;
+    uint8_t maxSend;
+    uint8_t maxFinish;
 
     void initPort();
     QFile firmwareFile;
     QByteArray firmwareData;
     uint8_t checkSum(uint8_t * buf ,uint32_t len);
+    void finishCmdSend();
     bool transferComplete;
     unsigned short pckSize;
     unsigned int fileLen;
